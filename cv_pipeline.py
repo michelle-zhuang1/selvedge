@@ -1,23 +1,61 @@
 from __future__ import annotations
 import warnings
 from dataclasses import dataclass, field
+from typing import ClassVar, Literal
 import numpy as np
 from fit_engine import GarmentMeasurements
 
 _LOW_CONFIDENCE_THRESHOLD = 0.70
 
-_GARMENT_ZONES: dict[str, list[str]] = {
-    "shirt":    ["bust", "waist", "shoulder", "length"],
-    "jacket":   ["bust", "waist", "shoulder", "length"],
-    "dress":    ["bust", "waist", "hip", "length"],
-    "skirt":    ["waist", "hip", "length"],
-    "trousers": ["waist", "hip", "inseam", "length"],
+GarmentType = Literal["shirt", "jacket", "dress", "skirt", "trousers"]
+
+
+@dataclass
+class Garment:
+    zones: ClassVar[list[str]]
+
+    @classmethod
+    def from_type(cls, garment_type: GarmentType) -> "Garment":
+        return _GARMENT_REGISTRY[garment_type]()
+
+
+@dataclass
+class Shirt(Garment):
+    zones: ClassVar[list[str]] = ["bust", "waist", "shoulder", "length"]
+
+
+@dataclass
+class Jacket(Garment):
+    zones: ClassVar[list[str]] = ["bust", "waist", "shoulder", "length"]
+
+
+@dataclass
+class Dress(Garment):
+    zones: ClassVar[list[str]] = ["bust", "waist", "hip", "length"]
+
+
+@dataclass
+class Skirt(Garment):
+    zones: ClassVar[list[str]] = ["waist", "hip", "length"]
+
+
+@dataclass
+class Trousers(Garment):
+    zones: ClassVar[list[str]] = ["waist", "hip", "inseam", "length"]
+
+
+_GARMENT_REGISTRY: dict[GarmentType, type[Garment]] = {
+    "shirt": Shirt,
+    "jacket": Jacket,
+    "dress": Dress,
+    "skirt": Skirt,
+    "trousers": Trousers,
 }
 
 
 @dataclass
 class GarmentAnalysis:
-    garment_type: str
+    garment_type: GarmentType
     confidence: float
     dimensions: dict[str, float | None] = field(default_factory=dict)
 
@@ -39,7 +77,7 @@ class CVPipeline:
 
         raw_dims = self._extract_dimensions(front_c, back_c, garment_type)
 
-        allowed = _GARMENT_ZONES.get(garment_type, list(raw_dims.keys()))
+        allowed = Garment.from_type(garment_type).zones if garment_type in _GARMENT_REGISTRY else list(raw_dims.keys())
         dimensions = {k: v for k, v in raw_dims.items() if k in allowed}
 
         return GarmentAnalysis(
