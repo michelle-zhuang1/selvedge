@@ -1,7 +1,11 @@
 import streamlit as st
+from datetime import date
 from pathlib import Path
 from body_profile import BodyProfile, load, save, validate
 from fit_engine import GarmentMeasurements, compute_alterations
+from feedback import BODY_ZONES, ZoneRating, FitFeedback, save_feedback, load_feedback_history
+
+GARMENTS_DIR = Path("garments")
 
 PROFILE_PATH = Path("body_profile.json")
 
@@ -13,7 +17,7 @@ profile = load(PROFILE_PATH) or BodyProfile(
     inseam=0.0, height=0.0, shoulder=0.0,
 )
 
-tab_profile, tab_alter = st.tabs(["Body measurements", "Alter Mode"])
+tab_profile, tab_alter, tab_feedback = st.tabs(["Body measurements", "Alter Mode", "Fit feedback"])
 
 # ── Body measurements ──────────────────────────────────────────────────────────
 with tab_profile:
@@ -87,3 +91,46 @@ with tab_alter:
             for instr in instructions:
                 direction = "⬆ take in" if instr.delta_cm > 0 else "⬇ let out"
                 st.markdown(f"**{instr.zone.capitalize()}** — {direction} **{abs(instr.delta_cm):.1f} cm**")
+
+# ── Fit feedback ───────────────────────────────────────────────────────────────
+with tab_feedback:
+    st.caption("Record how a garment actually felt after wearing it.")
+
+    garment_name = st.text_input("Garment name", placeholder="e.g. linen-shirt")
+    feedback_date = st.date_input("Date worn", value=date.today())
+
+    st.subheader("Zone ratings")
+    st.caption("Rate fit per zone: 1 = too tight, 3 = good, 5 = too loose.")
+    zone_ratings: list[ZoneRating] = []
+    cols = st.columns(3)
+    for i, zone in enumerate(BODY_ZONES):
+        rating = cols[i % 3].slider(zone.capitalize(), min_value=1, max_value=5, value=3, key=f"fb_{zone}")
+        zone_ratings.append(ZoneRating(zone=zone, rating=rating))
+
+    notes = st.text_area("Notes", placeholder="Any observations about the fit…")
+
+    if st.button("Save feedback", disabled=not garment_name.strip()):
+        session = f"{feedback_date.isoformat()}-{garment_name.strip().lower().replace(' ', '-')}"
+        garment_dir = GARMENTS_DIR / session
+        feedback = FitFeedback(
+            date=feedback_date.isoformat(),
+            zone_ratings=zone_ratings,
+            notes=notes,
+        )
+        save_feedback(garment_dir, feedback)
+        st.success(f"Feedback saved to garments/{session}/fit_feedback.json")
+
+    st.divider()
+    st.subheader("Feedback history")
+    history_name = st.text_input("Look up garment session", placeholder="YYYY-MM-DD-name", key="hist_name")
+    if history_name.strip():
+        history = load_feedback_history(GARMENTS_DIR / history_name.strip())
+        if not history:
+            st.info("No feedback recorded for this session yet.")
+        else:
+            for entry in history:
+                with st.expander(f"{entry.date}"):
+                    for zr in entry.zone_ratings:
+                        st.write(f"**{zr.zone.capitalize()}**: {zr.rating}/5")
+                    if entry.notes:
+                        st.write(f"Notes: {entry.notes}")
