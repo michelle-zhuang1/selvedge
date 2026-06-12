@@ -17,6 +17,9 @@ _HEM_ALLOWANCE = 3.0  # cm
 _EASE_WAIST = 2.0     # cm
 _EASE_HIP = 4.0       # cm
 _WASTE_FACTOR = 1.15
+_SEAT_EASE = 2.0      # cm extra width for back leg
+_EASE_RISE = 1.5      # cm comfort at crotch
+_RISE_DEFAULT = 28.0  # cm mid-rise fallback when body.rise is absent
 
 
 class SkirtLength(float, Enum):
@@ -107,6 +110,57 @@ def _skirt_notes(length: SkirtLength, sa: float, fits: bool) -> str:
     ]
     if not fits:
         lines.insert(0, "⚠ WARNING: estimated fabric yield may be insufficient for this length.")
+    return "\n".join(lines)
+
+
+def generate_trousers(
+    body: BodyProfile,
+    yield_est: YieldEstimate,
+    seam_allowance: float = _SEAM_DEFAULT,
+) -> PatternOutput:
+    rise = (body.rise or _RISE_DEFAULT) + _EASE_RISE
+    inseam = body.inseam
+    waist_quarter = (body.waist + _EASE_WAIST) / 4
+    hip_quarter   = (body.hip   + _EASE_HIP)   / 4
+    panel_length  = rise + inseam + _HEM_ALLOWANCE
+
+    front_leg = _expand(_skirt_panel(waist_quarter, hip_quarter, panel_length), seam_allowance)
+    back_leg  = _expand(_skirt_panel(waist_quarter + _SEAT_EASE, hip_quarter + _SEAT_EASE, panel_length), seam_allowance)
+
+    wb_width  = body.waist + _EASE_WAIST + 3.0 + 2 * seam_allowance
+    wb_height = 6.0 + 2 * seam_allowance
+    waistband = _rect(wb_width, wb_height)
+
+    pieces = [
+        PatternPiece("front leg",  front_leg, "vertical"),
+        PatternPiece("back leg",   back_leg,  "vertical"),
+        PatternPiece("waistband",  waistband, "horizontal"),
+    ]
+
+    total_area = sum(p.polygon.area for p in pieces) * _WASTE_FACTOR
+    fits = total_area <= yield_est.area_cm2
+
+    notes = _trouser_notes(rise, inseam, seam_allowance, fits)
+    return PatternOutput(pieces=pieces, fits_yield=fits, assembly_notes=notes)
+
+
+def _trouser_notes(rise: float, inseam: float, sa: float, fits: bool) -> str:
+    lines = [
+        f"TROUSERS — rise {rise:.1f} cm, inseam {inseam:.1f} cm",
+        f"Seam allowance: {sa} cm throughout unless marked.",
+        f"Hem allowance: {_HEM_ALLOWANCE} cm (fold twice for a clean hem).",
+        "",
+        "Assembly order:",
+        "1. Stitch front crotch seam (right sides together); clip curve.",
+        "2. Stitch back crotch seam; clip curve.",
+        "3. Join front to back at inner leg seams.",
+        "4. Join at side seams; press open.",
+        "5. Attach waistband: fold in half lengthwise, stitch to waist edge.",
+        "6. Insert zip at centre front or left side before closing waistband.",
+        "7. Hem: press up hem allowance, topstitch or slip stitch.",
+    ]
+    if not fits:
+        lines.insert(0, "⚠ WARNING: estimated fabric yield may be insufficient for these trousers.")
     return "\n".join(lines)
 
 

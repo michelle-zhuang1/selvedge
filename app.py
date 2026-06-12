@@ -8,7 +8,7 @@ from fit_engine import GarmentMeasurements, compute_alterations
 from feedback import BODY_ZONES, ZoneRating, FitFeedback, save_feedback, load_feedback_history
 from yield_engine import estimate_yield, rank_feasibility, save_cv_output
 from cv_pipeline import GarmentAnalysis
-from pattern_engine import SkirtLength, generate_skirt, save_svg, save_dxf, save_assembly_notes
+from pattern_engine import SkirtLength, generate_skirt, generate_trousers, save_svg, save_dxf, save_assembly_notes
 
 GARMENTS_DIR = Path("garments")
 
@@ -259,6 +259,34 @@ with tab_remake:
                                           file_name="skirt_pattern.svg", mime="image/svg+xml")
                     col_b.download_button("Download DXF", dxf_path.read_bytes(),
                                           file_name="skirt_pattern.dxf", mime="application/octet-stream")
+                    col_c.download_button("Download notes", notes_path.read_text(),
+                                          file_name="assembly_notes.txt", mime="text/plain")
+
+                    st.code(pattern.assembly_notes)
+
+        trousers_feasible = any(r.garment_type == "trousers" and r.feasible for r in results)
+        if trousers_feasible:
+            st.divider()
+            st.subheader("Generate trouser pattern")
+            if st.button("Generate pattern", key="gen_trousers"):
+                pattern = generate_trousers(profile, yield_est)
+                if not pattern.fits_yield:
+                    st.warning("Fabric yield may be insufficient for these trousers — review the assembly notes.")
+
+                with tempfile.TemporaryDirectory() as tmp:
+                    tmp = Path(tmp)
+                    svg_path   = tmp / "trousers.svg"
+                    dxf_path   = tmp / "trousers.dxf"
+                    notes_path = tmp / "assembly_notes.txt"
+                    save_svg(pattern, svg_path)
+                    save_dxf(pattern, dxf_path)
+                    save_assembly_notes(pattern, notes_path)
+
+                    col_a, col_b, col_c = st.columns(3)
+                    col_a.download_button("Download SVG", svg_path.read_bytes(),
+                                          file_name="trouser_pattern.svg", mime="image/svg+xml")
+                    col_b.download_button("Download DXF", dxf_path.read_bytes(),
+                                          file_name="trouser_pattern.dxf", mime="application/octet-stream")
                     col_c.download_button("Download notes", notes_path.read_text(),
                                           file_name="assembly_notes.txt", mime="text/plain")
 
