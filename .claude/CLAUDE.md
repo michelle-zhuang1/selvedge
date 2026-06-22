@@ -1,30 +1,15 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project Overview
 
-**Selvedge** is a local-first personal tool for upcycling thrifted garments. It digitizes flat garment photos, estimates fabric yield, and generates fitted/laser-cuttable pattern pieces. Two modes: **Alter Mode** (fit adjustments for any garment) and **Remake Mode** (fabric yield → new pattern generation, Skirts & Trousers only). Woven stable fabrics only — no stretch/knit.
+**Selvedge** is a local-first personal tool for upcycling thrifted garments. Two modes: **Alter Mode** (fit adjustments) and **Remake Mode** (fabric yield → new pattern pieces). Woven stable fabrics only — no stretch/knit.
 
-The primary spec is `Selvedge_PRD.pdf`. The project is pre-implementation; development follows 12 milestones defined there (M1–M12).
-
-## Planned Tech Stack
-
-| Layer | Library |
-|-------|---------|
-| UI | Streamlit |
-| CV | OpenCV, Pillow |
-| ML | PyTorch |
-| Geometry | Shapely |
-| Pattern output | svgwrite, ezdxf (SVG display + DXF for laser cutter) |
-| LLM | Anthropic Python SDK (Claude API) |
-| Storage | JSON + filesystem (local only) |
-
-## Running the App
+## Commands
 
 ```bash
-pip install -r requirements.txt   # once requirements.txt exists
-streamlit run app.py
+uv pip install -r requirements.txt
+uv run streamlit run app.py
+uv run pytest tests/ -v          # or: npm test
 ```
 
 ## Architecture
@@ -56,15 +41,6 @@ selvedge/
             └── assembly_notes.txt
 ```
 
-## ML Strategy
-
-Rule-based baselines are fully functional without any trained models. ML layers activate progressively once enough personal data accumulates:
-
-- **Garment classification** — fine-tuned ResNet/EfficientNet on DeepFashion2 + iMaterialist; >85% accuracy target
-- **Yield estimation** — V1: lookup table + geometric correction; V2: regression model after ~20 labeled garments
-- **Cutting layout optimizer** — No-Fit Polygon nesting (Shapely/Minkowski) with learned piece-ordering heuristics
-- **Fit feedback model** — personalizes ease values after ~10–15 feedback entries
-
 ## Coding Conventions
 
 ### Type annotations
@@ -75,12 +51,3 @@ All module-level constants, function signatures, and dataclass fields must have 
 ### Waste factor convention
 `_WASTE_FACTOR` represents the **waste fraction** (e.g. `0.15` = 15%), not the multiplier. Always apply it as `value * (1 + _WASTE_FACTOR)`. Using `1.15` directly as a constant is wrong — it prevents negative values from being meaningful and obscures the intent. This convention must be consistent across `yield_engine.py` and `pattern_engine.py`.
 
-## Development Order
-
-Follow milestones M1 → M12 from the PRD. Suggested order for initial implementation:
-- **M1** — Streamlit shell + body_profile.json schema + onboarding
-- **M2–M3** — CV pipeline (classification, dimension extraction)
-- **M4** — Alter Mode end-to-end (simplest validation loop)
-- **M5–M8** — Remake Mode (yield → pattern → NFP layout)
-- **M9** — LLM creative layer (Claude API integration)
-- **M10–M12** — Fit feedback loop + personal ML models

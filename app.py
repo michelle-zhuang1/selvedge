@@ -69,7 +69,7 @@ tab_profile, tab_alter, tab_remake, tab_feedback = st.tabs(["Body Measurements",
 with tab_profile:
     st.caption("All measurements in cm. Hover the ℹ️ icon on each field for guidance.")
 
-    with st.expander("📐 Measurement reference"):
+    with st.expander("Measurement reference"):
         st.image("assets/measurement_reference.png", use_container_width=True)
 
     with st.form("measurements"):

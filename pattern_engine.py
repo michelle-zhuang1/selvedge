@@ -12,14 +12,14 @@ from shapely import affinity
 from body_profile import BodyProfile
 from yield_engine import YieldEstimate
 
-_SEAM_DEFAULT = 1.5   # cm
-_HEM_ALLOWANCE = 3.0  # cm
-_EASE_WAIST = 2.0     # cm
-_EASE_HIP = 4.0       # cm
-_WASTE_FACTOR = 0.15  # 15% waste fraction; use as (1 + _WASTE_FACTOR)
-_SEAT_EASE = 2.0      # cm extra width for back leg
-_EASE_RISE = 1.5      # cm comfort at crotch
-_RISE_DEFAULT = 28.0  # cm mid-rise fallback when body.rise is absent
+_SEAM_DEFAULT_CM: float = 1.5
+_HEM_ALLOWANCE_CM: float = 3.0
+_EASE_WAIST_CM: float = 2.0
+_EASE_HIP_CM: float = 4.0
+_WASTE_FACTOR: float = 0.15  # fraction; apply as (1 + _WASTE_FACTOR)
+_SEAT_EASE_CM: float = 2.0
+_EASE_RISE_CM: float = 1.5
+_RISE_DEFAULT_CM: float = 28.0
 
 
 class SkirtLength(float, Enum):
@@ -70,14 +70,14 @@ def generate_skirt(
     body: BodyProfile,
     yield_est: YieldEstimate,
     length: SkirtLength = SkirtLength.MIDI,
-    seam_allowance: float = _SEAM_DEFAULT,
+    seam_allowance: float = _SEAM_DEFAULT_CM,
 ) -> PatternOutput:
-    waist_half = (body.waist + _EASE_WAIST) / 2
-    hip_half   = (body.hip   + _EASE_HIP)   / 2
+    waist_half = (body.waist + _EASE_WAIST_CM) / 2
+    hip_half   = (body.hip   + _EASE_HIP_CM)   / 2
 
-    panel = _expand(_skirt_panel(waist_half, hip_half, float(length) + _HEM_ALLOWANCE), seam_allowance)
+    panel = _expand(_skirt_panel(waist_half, hip_half, float(length) + _HEM_ALLOWANCE_CM), seam_allowance)
 
-    wb_width  = body.waist + _EASE_WAIST + 3.0 + 2 * seam_allowance  # +3cm overlap
+    wb_width  = body.waist + _EASE_WAIST_CM + 3.0 + 2 * seam_allowance  # +3cm overlap
     wb_height = 6.0 + 2 * seam_allowance                              # 3cm finished × 2
     waistband = _rect(wb_width, wb_height)
 
@@ -99,7 +99,7 @@ def _skirt_notes(length: SkirtLength, sa: float, fits: bool) -> str:
     lines = [
         f"SKIRT — {name} ({float(length):.0f} cm finished length)",
         f"Seam allowance: {sa} cm throughout unless marked.",
-        f"Hem allowance: {_HEM_ALLOWANCE} cm (fold twice for a clean hem).",
+        f"Hem allowance: {_HEM_ALLOWANCE_CM} cm (fold twice for a clean hem).",
         "",
         "Assembly order:",
         "1. Stitch front and back panels together at side seams (right sides together).",
@@ -116,18 +116,18 @@ def _skirt_notes(length: SkirtLength, sa: float, fits: bool) -> str:
 def generate_trousers(
     body: BodyProfile,
     yield_est: YieldEstimate,
-    seam_allowance: float = _SEAM_DEFAULT,
+    seam_allowance: float = _SEAM_DEFAULT_CM,
 ) -> PatternOutput:
-    rise = (body.rise or _RISE_DEFAULT) + _EASE_RISE
+    rise = (body.rise or _RISE_DEFAULT_CM) + _EASE_RISE_CM
     inseam = body.inseam
-    waist_quarter = (body.waist + _EASE_WAIST) / 4
-    hip_quarter   = (body.hip   + _EASE_HIP)   / 4
-    panel_length  = rise + inseam + _HEM_ALLOWANCE
+    waist_quarter = (body.waist + _EASE_WAIST_CM) / 4
+    hip_quarter   = (body.hip   + _EASE_HIP_CM)   / 4
+    panel_length  = rise + inseam + _HEM_ALLOWANCE_CM
 
     front_leg = _expand(_skirt_panel(waist_quarter, hip_quarter, panel_length), seam_allowance)
-    back_leg  = _expand(_skirt_panel(waist_quarter + _SEAT_EASE, hip_quarter + _SEAT_EASE, panel_length), seam_allowance)
+    back_leg  = _expand(_skirt_panel(waist_quarter + _SEAT_EASE_CM, hip_quarter + _SEAT_EASE_CM, panel_length), seam_allowance)
 
-    wb_width  = body.waist + _EASE_WAIST + 3.0 + 2 * seam_allowance
+    wb_width  = body.waist + _EASE_WAIST_CM + 3.0 + 2 * seam_allowance
     wb_height = 6.0 + 2 * seam_allowance
     waistband = _rect(wb_width, wb_height)
 
@@ -148,7 +148,7 @@ def _trouser_notes(rise: float, inseam: float, sa: float, fits: bool) -> str:
     lines = [
         f"TROUSERS — rise {rise:.1f} cm, inseam {inseam:.1f} cm",
         f"Seam allowance: {sa} cm throughout unless marked.",
-        f"Hem allowance: {_HEM_ALLOWANCE} cm (fold twice for a clean hem).",
+        f"Hem allowance: {_HEM_ALLOWANCE_CM} cm (fold twice for a clean hem).",
         "",
         "Assembly order:",
         "1. Stitch front crotch seam (right sides together); clip curve.",
