@@ -4,6 +4,8 @@ from pathlib import Path
 from body_profile import BodyProfile, load, save, validate
 from fit_engine import GarmentMeasurements, compute_alterations
 from feedback import BODY_ZONES, ZoneRating, FitFeedback, save_feedback, load_feedback_history
+from yield_engine import estimate_yield, rank_feasibility, save_cv_output
+from cv_pipeline import GarmentAnalysis
 
 GARMENTS_DIR = Path("garments")
 
@@ -17,7 +19,7 @@ profile = load(PROFILE_PATH) or BodyProfile(
     inseam=0.0, height=0.0, shoulder=0.0,
 )
 
-tab_profile, tab_alter, tab_feedback = st.tabs(["Body measurements", "Alter Mode", "Fit feedback"])
+tab_profile, tab_alter, tab_remake, tab_feedback = st.tabs(["Body measurements", "Alter Mode", "Remake Mode", "Fit feedback"])
 
 # ── Body measurements ──────────────────────────────────────────────────────────
 with tab_profile:
@@ -91,6 +93,59 @@ with tab_alter:
             for instr in instructions:
                 direction = "⬆ take in" if instr.delta_cm > 0 else "⬇ let out"
                 st.markdown(f"**{instr.zone.capitalize()}** — {direction} **{abs(instr.delta_cm):.1f} cm**")
+
+# ── Remake Mode ────────────────────────────────────────────────────────────────
+with tab_remake:
+    profile_warnings = validate(profile)
+    if profile_warnings:
+        st.warning("Some body measurements may be incomplete — feasibility estimates may be inaccurate.")
+
+    st.caption("Enter the source garment's flat measurements in cm to estimate fabric yield.")
+
+    r_garment_type = st.selectbox("Source garment type", ["shirt", "dress", "jacket", "skirt", "trousers"], key="r_type")
+    r_confidence = st.slider("Classification confidence", 0.0, 1.0, 0.9, 0.01, key="r_conf")
+
+    col1, col2, col3 = st.columns(3)
+    r_bust     = col1.number_input("Bust",     min_value=0.0, step=0.5, key="r_bust")
+    r_waist    = col2.number_input("Waist",    min_value=0.0, step=0.5, key="r_waist")
+    r_hip      = col3.number_input("Hip",      min_value=0.0, step=0.5, key="r_hip")
+    r_inseam   = col1.number_input("Inseam",   min_value=0.0, step=0.5, key="r_inseam")
+    r_shoulder = col2.number_input("Shoulder", min_value=0.0, step=0.5, key="r_shoulder")
+    r_length   = col3.number_input("Length",   min_value=0.0, step=0.5, key="r_length")
+
+    r_garment_name = st.text_input("Garment name (for saving)", placeholder="e.g. plaid-shirt")
+
+    if st.button("Estimate yield"):
+        dims = {
+            k: v or None for k, v in {
+                "bust": r_bust, "waist": r_waist, "hip": r_hip,
+                "inseam": r_inseam, "shoulder": r_shoulder, "length": r_length,
+            }.items()
+        }
+        analysis = GarmentAnalysis(
+            garment_type=r_garment_type,
+            confidence=r_confidence,
+            dimensions=dims,
+        )
+        yield_est = estimate_yield(analysis)
+        results = rank_feasibility(yield_est, profile)
+
+        st.subheader(f"Estimated yield: ~{yield_est.area_cm2:.0f} cm²")
+        st.caption(f"Approx {yield_est.width_cm:.0f} cm wide × {yield_est.length_cm:.0f} cm long")
+
+        st.subheader("Feasibility ranking")
+        for r in results:
+            if r.feasible:
+                st.success(f"**{r.garment_type.capitalize()}** — feasible ({r.yield_pct:.0%} of required fabric)")
+            else:
+                st.error(f"**{r.garment_type.capitalize()}** — {r.reason}")
+
+        if r_garment_name.strip():
+            session = f"{date.today().isoformat()}-{r_garment_name.strip().lower().replace(' ', '-')}"
+            garment_dir = GARMENTS_DIR / session
+            garment_dir.mkdir(parents=True, exist_ok=True)
+            save_cv_output(analysis, yield_est, garment_dir / "cv_output.json")
+            st.info(f"Saved to garments/{session}/cv_output.json")
 
 # ── Fit feedback ───────────────────────────────────────────────────────────────
 with tab_feedback:
