@@ -3,3 +3,5 @@ pytest>=8.0
 shapely>=2.0
 svgwrite>=1.4
 ezdxf>=1.1
+anthropic>=0.25
+python-dotenv>=1.0

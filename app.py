@@ -9,6 +9,7 @@ from feedback import BODY_ZONES, ZoneRating, FitFeedback, save_feedback, load_fe
 from yield_engine import estimate_yield, rank_feasibility, save_cv_output
 from cv_pipeline import GarmentAnalysis
 from pattern_engine import SkirtLength, generate_skirt, generate_trousers, save_svg, save_dxf, save_assembly_notes
+from llm_layer import get_design_suggestions
 
 GARMENTS_DIR = Path("garments")
 
@@ -224,6 +225,12 @@ with tab_remake:
                 st.success(f"**{r.garment_type.capitalize()}** — feasible ({r.yield_pct:.0%} of required fabric)")
             else:
                 st.error(f"**{r.garment_type.capitalize()}** — {r.reason}")
+
+        suggestions = get_design_suggestions(r_garment_type, yield_est, profile)
+        if suggestions:
+            st.divider()
+            st.subheader("Design suggestions")
+            st.info(suggestions)
 
         skirt_feasible = any(r.garment_type == "skirt" and r.feasible for r in results)
         if skirt_feasible:
