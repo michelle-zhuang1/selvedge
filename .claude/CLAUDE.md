@@ -65,6 +65,16 @@ Rule-based baselines are fully functional without any trained models. ML layers 
 - **Cutting layout optimizer** — No-Fit Polygon nesting (Shapely/Minkowski) with learned piece-ordering heuristics
 - **Fit feedback model** — personalizes ease values after ~10–15 feedback entries
 
+## Coding Conventions
+
+### Type annotations
+All module-level constants, function signatures, and dataclass fields must have explicit type annotations. Prefer named types over anonymous structures:
+- Use `NamedTuple` subclasses instead of bare `tuple[str, float, ...]` for structured data (e.g. `_YieldFactor(NamedTuple)` in `yield_engine.py`)
+- Use `tuple[str, ...]` or `frozenset[str]` for immutable collections instead of `list` — mutable module-level lists are a common source of accidental mutation bugs
+
+### Waste factor convention
+`_WASTE_FACTOR` represents the **waste fraction** (e.g. `0.15` = 15%), not the multiplier. Always apply it as `value * (1 + _WASTE_FACTOR)`. Using `1.15` directly as a constant is wrong — it prevents negative values from being meaningful and obscures the intent. This convention must be consistent across `yield_engine.py` and `pattern_engine.py`.
+
 ## Development Order
 
 Follow milestones M1 → M12 from the PRD. Suggested order for initial implementation:

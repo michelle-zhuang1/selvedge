@@ -16,7 +16,7 @@ _SEAM_DEFAULT = 1.5   # cm
 _HEM_ALLOWANCE = 3.0  # cm
 _EASE_WAIST = 2.0     # cm
 _EASE_HIP = 4.0       # cm
-_WASTE_FACTOR = 1.15
+_WASTE_FACTOR = 0.15  # 15% waste fraction; use as (1 + _WASTE_FACTOR)
 _SEAT_EASE = 2.0      # cm extra width for back leg
 _EASE_RISE = 1.5      # cm comfort at crotch
 _RISE_DEFAULT = 28.0  # cm mid-rise fallback when body.rise is absent
@@ -87,7 +87,7 @@ def generate_skirt(
         PatternPiece("waistband",    waistband, "horizontal"),
     ]
 
-    total_area = sum(p.polygon.area for p in pieces) * _WASTE_FACTOR
+    total_area = sum(p.polygon.area for p in pieces) * (1 + _WASTE_FACTOR)
     fits = total_area <= yield_est.area_cm2
 
     notes = _skirt_notes(length, seam_allowance, fits)
@@ -137,7 +137,7 @@ def generate_trousers(
         PatternPiece("waistband",  waistband, "horizontal"),
     ]
 
-    total_area = sum(p.polygon.area for p in pieces) * _WASTE_FACTOR
+    total_area = sum(p.polygon.area for p in pieces) * (1 + _WASTE_FACTOR)
     fits = total_area <= yield_est.area_cm2
 
     notes = _trouser_notes(rise, inseam, seam_allowance, fits)
