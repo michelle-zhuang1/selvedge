@@ -9,6 +9,7 @@ from feedback import BODY_ZONES, ZoneRating, FitFeedback, save_feedback, load_fe
 from yield_engine import estimate_yield, rank_feasibility, save_cv_output
 from cv_pipeline import GarmentAnalysis
 from pattern_engine import SkirtLength, generate_skirt, generate_trousers, save_svg, save_dxf, save_assembly_notes
+from layout_engine import compute_layout, save_layout_svg
 
 GARMENTS_DIR = Path("garments")
 
@@ -264,6 +265,14 @@ with tab_remake:
 
                     st.code(pattern.assembly_notes)
 
+                layout = compute_layout(pattern.pieces, yield_est.width_cm, yield_est.length_cm)
+                st.caption(f"Fabric utilization: {layout.utilization:.0%}")
+                with tempfile.TemporaryDirectory() as tmp:
+                    layout_path = Path(tmp) / "cutting_layout.svg"
+                    save_layout_svg(layout, yield_est.width_cm, yield_est.length_cm, layout_path)
+                    st.download_button("Download cutting layout", layout_path.read_bytes(),
+                                       file_name="cutting_layout.svg", mime="image/svg+xml")
+
         trousers_feasible = any(r.garment_type == "trousers" and r.feasible for r in results)
         if trousers_feasible:
             st.divider()
@@ -291,6 +300,15 @@ with tab_remake:
                                           file_name="assembly_notes.txt", mime="text/plain")
 
                     st.code(pattern.assembly_notes)
+
+                layout = compute_layout(pattern.pieces, yield_est.width_cm, yield_est.length_cm)
+                st.caption(f"Fabric utilization: {layout.utilization:.0%}")
+                with tempfile.TemporaryDirectory() as tmp:
+                    layout_path = Path(tmp) / "cutting_layout.svg"
+                    save_layout_svg(layout, yield_est.width_cm, yield_est.length_cm, layout_path)
+                    st.download_button("Download cutting layout", layout_path.read_bytes(),
+                                       file_name="cutting_layout.svg", mime="image/svg+xml",
+                                       key="dl_trouser_layout")
 
         if r_garment_name.strip():
             session = f"{date.today().isoformat()}-{r_garment_name.strip().lower().replace(' ', '-')}"
